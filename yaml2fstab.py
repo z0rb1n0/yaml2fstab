@@ -2,8 +2,10 @@
 
 
 # Exercise for yaml-defined fstab source.
-# The code is not defensive and there are no exception handlers,
-# but the data source is static, so that shouldn't be a problem.
+
+# Consumes a yaml file to generate a fstab file accordingly
+# (The yaml schema is not documented but the default --meta-fstab is a good
+# example)
 
 # About root-reserve:
 # I've always configured it/seen it configured at the FS superblock setting
