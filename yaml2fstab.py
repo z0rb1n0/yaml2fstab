@@ -5,9 +5,6 @@
 # The code is not defensive and there are no exception handlers,
 # but the data source is static, so that shouldn't be a problem.
 
-# The generated fstab block contains no headers, but they obviously are
-#<file system> <mount point>   <type>  <options>       <dump>  <pass>
-
 # About root-reserve:
 # I've always configured it/seen it configured at the FS superblock setting
 # (with mk/tune2fs), never as a mount-time option, and couldn't find anything
@@ -19,22 +16,91 @@
 # I obviously cannot test the fstab unless I build a test stack for it
 
 
-import sys, os, yaml
+import sys, os, argparse, yaml
 
-META_FSTAB = "meta_fstab.yaml"
-EMIT_METADATA = True
+
+DEFAULT_META_FSTAB = "meta_fstab.yaml"
+
+
+class MixedHelpFormatter(argparse.ArgumentDefaultsHelpFormatter, argparse.RawTextHelpFormatter):
+    """ We need to preseve some formatting in the help string. Hence this """
+    pass
 
 
 def main():
 
-    y_tree = yaml.safe_load(open(META_FSTAB, "r"))
-    
+
+    ap = argparse.ArgumentParser(
+        description = "\n".join(map(str.strip, str("""
+
+            Reads a meta-fstab yaml files and generates the fstab accordingly.
+
+        """).split("\n"))),
+        formatter_class = MixedHelpFormatter
+    )
+
+
+    #ap.add_argument("command_row", nargs = "*", help = "Example all-capturing positional argument")
+    #actions_group = ap.add_mutually_exclusive_group()
+    #actions_group.add_argument("--yes", dest = "yes", action = "store_true", required = False, default = argparse.SUPPRESS, help = "Do yes example")
+    #actions_group.add_argument("--no", dest = "no", action = "store_true", required = False, default = argparse.SUPPRESS, help = "Do no example")
+    #ap.add_argument("--required-str", dest = "required_str", metavar = "EXAMPLE_STR", type = str, required = True, help = "Example of required argument")
+    #ap.add_argument("--optional-int", dest = "optional_int", metavar = "EXAMPLE_INT", type = int, required = False, default = 0, help = "Example of optional argument")
+
+    ap.add_argument("--meta-fstab",
+        dest = "meta_fstab",
+        metavar = "PATH",
+        type = str,
+        required = False,
+        default = DEFAULT_META_FSTAB,
+        help = "The file containing the fstab-defining yaml"
+    )
+
+    ap.add_argument("--headers",
+        dest = "headers",
+        action = "store_true",
+        required = False,
+        default = argparse.SUPPRESS,
+        help = """Print fstab comment line with headers"""
+    )
+
+    ap.add_argument("--debug",
+        dest = "debug",
+        action = "store_true",
+        required = False,
+        default = argparse.SUPPRESS,
+        help = """Debug mode. Causes the resulting fstab lines to be """
+            """preceded by the metadata from which they were generated"""
+    )
+
+    cmd_args = ap.parse_args()
+
+    try:
+        y_tree = yaml.safe_load(open(cmd_args.meta_fstab, "r"))
+    except (
+        FileNotFoundError,
+        PermissionError,
+        OSError,
+        yaml.parser.ParserError
+    ) as e_load:
+        sys.stderr.write("Cannot open/load yaml file `%s`: %s(%s)\n" % (
+            cmd_args.meta_fstab, e_load.__class__.__name__, e_load
+        ))
+        return 4
+
     # things are buffered up in a list
     fstab_lines = []
-    
+
+
+    if ("headers" in cmd_args):
+        fstab_lines.append("#%-30s %-25s %-12s %-40s %-8s %-8s" % (
+            "<file system>", "<mount point>", "<type>", "<options>", "<dump>", "<pass>"
+        ))
+
+
     for m_dev, m_def in y_tree["fstab"].items():
 
-        if (EMIT_METADATA):
+        if ("debug" in cmd_args):
             fstab_lines.append("")
             fstab_lines.append("# from: %s %s" % (m_dev, m_def))
 
@@ -47,13 +113,14 @@ def main():
             m_def.get("export", None),
             m_def.get("root-reserve", None)
         )
-        
-        
-        fstab_lines.append("%-30s %-25s %-12s %-40s 0 %d" % (
+
+
+        fstab_lines.append("%-30s %-25s %-12s %-40s %-8d %-8d" % (
             m_dev +    ((":" + nfs_export) if nfs_export else ""),
             m_p,
             fs_t,
             ",".join(m_opts),
+            0, # dump is here for padding
             (m_p != "/") # only / gets scanned earlier
         ))
 
