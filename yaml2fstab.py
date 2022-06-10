@@ -39,14 +39,6 @@ def main():
         formatter_class = MixedHelpFormatter
     )
 
-
-    #ap.add_argument("command_row", nargs = "*", help = "Example all-capturing positional argument")
-    #actions_group = ap.add_mutually_exclusive_group()
-    #actions_group.add_argument("--yes", dest = "yes", action = "store_true", required = False, default = argparse.SUPPRESS, help = "Do yes example")
-    #actions_group.add_argument("--no", dest = "no", action = "store_true", required = False, default = argparse.SUPPRESS, help = "Do no example")
-    #ap.add_argument("--required-str", dest = "required_str", metavar = "EXAMPLE_STR", type = str, required = True, help = "Example of required argument")
-    #ap.add_argument("--optional-int", dest = "optional_int", metavar = "EXAMPLE_INT", type = int, required = False, default = 0, help = "Example of optional argument")
-
     ap.add_argument("--meta-fstab",
         dest = "meta_fstab",
         metavar = "PATH",
